@@ -4,3 +4,5 @@ meta:
     name: docker
 build:
   dockerfile: Dockerfile
+run:
+  containerPort: 3000
