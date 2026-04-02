@@ -3,6 +3,12 @@
 import { useState, useRef, useEffect } from 'react';
 import { UploadCloud, CheckCircle, AlertCircle, Camera, Loader2 } from 'lucide-react';
 
+declare global {
+  interface Window {
+    Telegram: any;
+  }
+}
+
 export default function OnboardingPage() {
   const [initData, setInitData] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);

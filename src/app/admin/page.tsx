@@ -45,7 +45,7 @@ export default async function AdminPage({
               <tr>
                 <td colSpan={6} className="p-8 text-center text-gray-500">Нет регистраций</td>
               </tr>
-            ) : profiles.map((p) => (
+            ) : profiles.map((p: any) => (
               <tr key={p.id} className="border-b border-white/5 hover:bg-white/5 transition-colors">
                 <td className="p-4 font-medium">{p.socialUsername || p.user.username || 'Нет'}</td>
                 <td className="p-4 text-gray-400">{p.geo || '-'}</td>
