@@ -4,8 +4,3 @@ meta:
     name: docker
 build:
   dockerfile: Dockerfile
-run:
-  persistence:
-    - mount: /app/prisma
-      storage: sqlite-db
-  command: node server.js
