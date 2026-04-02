@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { getPrisma } from '@/lib/prisma';
 import { validateInitData, parseUserFromInitData } from '@/lib/twa';
 
-const prisma = new PrismaClient();
 const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || '';
 
 export async function POST(req: Request) {
   try {
+    const prisma = getPrisma();
     const body = await req.json();
     const { initData, socialUsername, geo, niche, avgStoryViews, pricePerStory, base64Image } = body;
 

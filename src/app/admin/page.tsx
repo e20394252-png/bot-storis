@@ -1,7 +1,7 @@
-import { PrismaClient } from '@prisma/client';
+import { getPrisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 
-const prisma = new PrismaClient();
+export const dynamic = 'force-dynamic';
 
 export default async function AdminPage({
   searchParams,
@@ -19,6 +19,7 @@ export default async function AdminPage({
     );
   }
 
+  const prisma = getPrisma();
   const profiles = await prisma.creatorProfile.findMany({
     include: { user: true },
     orderBy: { createdAt: 'desc' }
