@@ -1,0 +1,93 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String   @id @default(uuid())
+  telegram_id BigInt   @unique
+  username    String?
+  first_name  String?
+  role        Role     @default(CREATOR) // CREATOR, ADVERTISER, ADMIN
+  status      String   @default("active") // active, banned
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  creatorProfile CreatorProfile?
+  campaigns      Campaign[]      @relation("Advertiser")
+  withdrawals    Withdrawal[]
+}
+
+enum Role {
+  CREATOR
+  ADVERTISER
+  ADMIN
+}
+
+model CreatorProfile {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  platform        String   @default("telegram")
+  socialUsername  String?
+  geo             String?
+  niche           String?
+  avgStoryViews   Int      @default(0)
+  pricePerStory   Int      @default(0)
+  balance         Int      @default(0)
+  status          String   @default("pending") // pending, approved, rejected
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignments Assignment[]
+}
+
+model Campaign {
+  id             String   @id @default(uuid())
+  advertiserId   String
+  title          String
+  description    String?
+  platform       String   @default("telegram")
+  niche          String?
+  geo            String?
+  budget         Int
+  creatorsNeeded Int
+  rewardPerStory Int      @default(0)
+  mediaUrl       String?
+  status         String   @default("draft") // draft, paid, matching, active, completed
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  advertiser  User         @relation("Advertiser", fields: [advertiserId], references: [id])
+  assignments Assignment[]
+}
+
+model Assignment {
+  id         String    @id @default(uuid())
+  campaignId String
+  creatorId  String
+  status     String    @default("invited") // invited, accepted, published, verified, rejected, paid
+  proofUrl   String?
+  dueDate    DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  campaign   Campaign       @relation(fields: [campaignId], references: [id])
+  creator    CreatorProfile @relation(fields: [creatorId], references: [id])
+}
+
+model Withdrawal {
+  id        String   @id @default(uuid())
+  userId    String
+  amount    Int
+  status    String   @default("pending") // pending, paid, rejected
+  details   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
