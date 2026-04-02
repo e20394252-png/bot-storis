@@ -34,8 +34,15 @@ export default function Home() {
         <p className="text-3xl font-bold font-mono">0 ₽</p>
       </section>
 
+      <button
+        onClick={() => window.location.href = '/onboarding'}
+        className="w-full bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-xl font-medium transition-colors text-center shadow-lg shadow-blue-900/20"
+      >
+        Заполнить анкету (Стать исполнителем)
+      </button>
+
       <div className="grid grid-cols-2 gap-4">
-        <button className="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-xl font-medium transition-colors text-center shadow-lg shadow-blue-900/20">
+        <button className="bg-gray-800 hover:bg-gray-700 text-white p-4 rounded-xl font-medium transition-colors text-center border border-gray-700">
           Найти задания
         </button>
         <button className="bg-gray-800 hover:bg-gray-700 text-white p-4 rounded-xl font-medium transition-colors text-center border border-gray-700">
