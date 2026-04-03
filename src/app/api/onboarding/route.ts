@@ -60,16 +60,19 @@ export async function POST(req: Request) {
     // 4. Send background asynchronous request to n8n AI webhook
     const n8nWebhookUrl = process.env.N8N_WEBHOOK_URL || '';
     if (n8nWebhookUrl) {
-      // We don't await this so the user gets immediate response
-      fetch(n8nWebhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          profileId: profile.id,
-          socialUsername,
-          base64Image,
-        })
-      }).catch(err => console.error("Failed to ping n8n:", err));
+      try {
+        await fetch(n8nWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            profileId: profile.id,
+            socialUsername,
+            base64Image,
+          })
+        });
+      } catch (err) {
+        console.error("Failed to ping n8n:", err);
+      }
     } else {
         console.log("No N8N_WEBHOOK_URL provided, skipping AI validation.");
     }
