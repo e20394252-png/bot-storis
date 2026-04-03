@@ -21,7 +21,7 @@ export default function RootLayout({
       <head>
         <Script src="https://telegram.org/js/telegram-web-app.js" strategy="beforeInteractive" />
       </head>
-      <body className={`${inter.className} bg-gray-900 text-gray-100 min-h-screen antialiased`}>
+      <body className={`${inter.className} antialiased`}>
         <TelegramProvider>
           {children}
         </TelegramProvider>
