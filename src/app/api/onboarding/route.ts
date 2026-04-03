@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 import { getPrisma } from '@/lib/prisma';
 import { validateInitData, parseUserFromInitData } from '@/lib/twa';
 
-const N8N_WEBHOOK_URL = process.env.N8N_WEBHOOK_URL || '';
-
 export async function POST(req: Request) {
   try {
     const prisma = getPrisma();
@@ -60,9 +58,10 @@ export async function POST(req: Request) {
     });
 
     // 4. Send background asynchronous request to n8n AI webhook
-    if (N8N_WEBHOOK_URL) {
+    const n8nWebhookUrl = process.env.N8N_WEBHOOK_URL || '';
+    if (n8nWebhookUrl) {
       // We don't await this so the user gets immediate response
-      fetch(N8N_WEBHOOK_URL, {
+      fetch(n8nWebhookUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
