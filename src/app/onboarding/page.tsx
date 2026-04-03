@@ -40,6 +40,20 @@ export default function OnboardingPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const fillTestData = () => {
+    setFormData({
+      socialUsername: '@test_channel',
+      geo: 'Москва',
+      niche: 'lifestyle',
+      avgStoryViews: '5000',
+      pricePerStory: '15000'
+    });
+    // Create a small test image (1px white PNG as base64)
+    const testBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    setBase64Image(testBase64);
+    setPreviewUrl(testBase64);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -123,10 +137,23 @@ export default function OnboardingPage() {
 
   return (
     <div className="min-h-screen bg-[#0f0f0f] text-white p-5 pb-24">
-      <h1 className="text-2xl font-bold mb-2">Анкета креатора</h1>
-      <p className="text-gray-400 text-sm mb-6">
-        Заполните данные о вашем блоге и прикрепите статистику
-      </p>
+      <div className="flex items-start justify-between mb-2">
+        <div>
+          <h1 className="text-2xl font-bold">Анкета креатора</h1>
+          <p className="text-gray-400 text-sm mt-1">
+            Заполните данные о вашем блоге и прикрепите статистику
+          </p>
+        </div>
+        {process.env.NODE_ENV !== 'production' || !initData ? (
+          <button
+            type="button"
+            onClick={fillTestData}
+            className="shrink-0 ml-3 text-xs bg-yellow-500/15 text-yellow-400 border border-yellow-500/30 rounded-lg px-3 py-2 hover:bg-yellow-500/25 transition-colors mt-1"
+          >
+            🧪 Тест
+          </button>
+        ) : null}
+      </div>
 
       {errorMsg && (
         <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6 flex items-start gap-3">
