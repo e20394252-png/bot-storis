@@ -61,7 +61,7 @@ export async function POST(req: Request) {
     const n8nWebhookUrl = process.env.N8N_WEBHOOK_URL || '';
     if (n8nWebhookUrl) {
       try {
-        await fetch(n8nWebhookUrl, {
+        const res = await fetch(n8nWebhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -70,6 +70,8 @@ export async function POST(req: Request) {
             base64Image,
           })
         });
+        const responseText = await res.text();
+        console.log(`n8n Webhook Response: ${res.status} ${res.statusText} - ${responseText}`);
       } catch (err) {
         console.error("Failed to ping n8n:", err);
       }
