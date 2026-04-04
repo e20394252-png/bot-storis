@@ -22,6 +22,10 @@ export async function GET(req: Request) {
       name: 'add Campaign.requirements',
       sql: `ALTER TABLE "Campaign" ADD COLUMN IF NOT EXISTS "requirements" TEXT`,
     },
+    {
+      name: 'add Campaign.broadcastedAt',
+      sql: `ALTER TABLE "Campaign" ADD COLUMN IF NOT EXISTS "broadcastedAt" TIMESTAMP`,
+    },
   ];
 
   for (const m of migrations) {

@@ -2,6 +2,7 @@ import { getPrisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { notifyProofApproved, notifyProofRejected } from '@/lib/notify';
+import PendingButton from '@/components/PendingButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -134,6 +135,13 @@ export default async function AdminPage({
     }
 
     console.log(`[broadcast] Sent campaign "${campaign!.title}" to ${sent} creators`);
+
+    // Save the broadcast timestamp
+    await prismaInner.campaign.update({
+      where: { id: campaignId },
+      data: { broadcastedAt: new Date() },
+    });
+
     redirect(`/admin?key=${_key}&tab=campaigns`);
   }
 
@@ -432,27 +440,29 @@ export default async function AdminPage({
                               <form action={broadcastCampaign} style={{ display: 'inline' }}>
                                 <input type="hidden" name="campaignId" value={camp.id} />
                                 <input type="hidden" name="_key" value={key} />
-                                <button type="submit" style={{
-                                  background: 'rgba(0,229,255,0.1)', border: '1px solid rgba(0,229,255,0.3)',
-                                  color: '#00e5ff', borderRadius: 6, padding: '4px 10px', fontSize: 11,
-                                  cursor: 'pointer', fontWeight: 600,
-                                }}>
-                                  📢 Разослать
-                                </button>
+                                <PendingButton
+                                  label="📢 Разослать"
+                                  pendingLabel="Рассылка..."
+                                  style={{ background: 'rgba(0,229,255,0.1)', border: '1px solid rgba(0,229,255,0.3)', color: '#00e5ff', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 600 }}
+                                />
                               </form>
                               {/* Delete button */}
                               <form action={deleteCampaign} style={{ display: 'inline' }}>
                                 <input type="hidden" name="id" value={camp.id} />
                                 <input type="hidden" name="_key" value={key} />
-                                <button type="submit" style={{
-                                  background: 'rgba(255,0,128,0.1)', border: '1px solid rgba(255,0,128,0.3)',
-                                  color: '#ff0080', borderRadius: 6, padding: '4px 10px', fontSize: 11,
-                                  cursor: 'pointer', fontWeight: 600,
-                                }}>
-                                  Удалить
-                                </button>
+                                <PendingButton
+                                  label="Удалить"
+                                  pendingLabel="..."
+                                  style={{ background: 'rgba(255,0,128,0.1)', border: '1px solid rgba(255,0,128,0.3)', color: '#ff0080', borderRadius: 6, padding: '4px 10px', fontSize: 11, fontWeight: 600 }}
+                                />
                               </form>
                             </div>
+                            {/* Broadcast timestamp badge */}
+                            {camp.broadcastedAt && (
+                              <div style={{ marginTop: 6, fontSize: 10, color: '#00e5ff', opacity: 0.6 }}>
+                                📨 {new Date(camp.broadcastedAt).toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            )}
                           </td>
                         </tr>
                       );
@@ -495,17 +505,21 @@ export default async function AdminPage({
                         <input type="hidden" name="assignmentId" value={a.id} />
                         <input type="hidden" name="action" value="verify" />
                         <input type="hidden" name="_key" value={key} />
-                        <button type="submit" style={{ width: '100%', padding: '11px', fontSize: 13, background: 'linear-gradient(135deg, #00e5ff, #00ff88)', border: 'none', borderRadius: 8, color: '#000', fontWeight: 700, cursor: 'pointer' }}>
-                          ✓ ОДОБРИТЬ +{a.campaign?.rewardPerStory?.toLocaleString()}₽
-                        </button>
+                        <PendingButton
+                          label={`✓ ОДОБРИТЬ +${a.campaign?.rewardPerStory?.toLocaleString()}₽`}
+                          pendingLabel="Одобряем..."
+                          style={{ width: '100%', padding: '11px', fontSize: 13, background: 'linear-gradient(135deg, #00e5ff, #00ff88)', border: 'none', borderRadius: 8, color: '#000', fontWeight: 700 }}
+                        />
                       </form>
                       <form action={verifyProof} style={{ flex: 1 }}>
                         <input type="hidden" name="assignmentId" value={a.id} />
                         <input type="hidden" name="action" value="reject" />
                         <input type="hidden" name="_key" value={key} />
-                        <button type="submit" style={{ width: '100%', padding: '11px', fontSize: 13, background: 'rgba(255,0,128,0.1)', border: '1px solid rgba(255,0,128,0.3)', borderRadius: 8, color: '#ff0080', fontWeight: 700, cursor: 'pointer' }}>
-                          ✗ ОТКЛОНИТЬ
-                        </button>
+                        <PendingButton
+                          label="✗ ОТКЛОНИТЬ"
+                          pendingLabel="Отклоняем..."
+                          style={{ width: '100%', padding: '11px', fontSize: 13, background: 'rgba(255,0,128,0.1)', border: '1px solid rgba(255,0,128,0.3)', borderRadius: 8, color: '#ff0080', fontWeight: 700 }}
+                        />
                       </form>
                     </div>
                   </div>
