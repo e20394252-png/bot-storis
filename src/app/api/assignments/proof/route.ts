@@ -54,35 +54,6 @@ async function notifyAdminProof(
   }
 }
 
-/** Forward proof to n8n for AI auto-verification */
-async function sendProofToN8n(
-  assignmentId: string,
-  base64Image: string,
-  creatorUsername: string | null,
-  campaignTitle: string
-) {
-  const n8nUrl = process.env.N8N_PROOF_WEBHOOK_URL; // separate proof workflow
-  if (!n8nUrl) return;
-
-  try {
-    const res = await fetch(n8nUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: 'proof',          // <-- n8n IF-node routes on this
-        assignmentId,
-        base64Image,
-        creatorUsername,
-        campaignTitle,
-        secret: process.env.N8N_SECRET,
-      }),
-    });
-    const text = await res.text();
-    console.log(`[n8n proof] Response: ${res.status} ${text}`);
-  } catch (err) {
-    console.error('[n8n proof] Failed:', err);
-  }
-}
 
 export async function POST(req: Request) {
   try {
@@ -134,9 +105,8 @@ export async function POST(req: Request) {
     const reward = assignment.campaign?.rewardPerStory || 0;
     const username = tgUser.username || null;
 
-    // Fire-and-forget: notify admin via Telegram (inline buttons) AND n8n AI
+    // Notify admin via Telegram with inline ✅/❌ buttons (manual review)
     notifyAdminProof(assignmentId, base64Image, username, campaignTitle, reward).catch(console.error);
-    sendProofToN8n(assignmentId, base64Image, username, campaignTitle).catch(console.error);
 
     return NextResponse.json({ success: true });
   } catch (err) {
