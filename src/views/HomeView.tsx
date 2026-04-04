@@ -32,12 +32,22 @@ export default function HomeView({ initData, tgUser, onGoToTasks }: HomeViewProp
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!initData) { setLoading(false); return; }
+    // Reset state each time initData changes (handles mobile late-init)
+    setProfile(null);
+    setCampaigns([]);
+
+    if (!initData) {
+      // Wait a bit — Telegram SDK might not have loaded yet
+      const t = setTimeout(() => setLoading(false), 1500);
+      return () => clearTimeout(t);
+    }
+
+    setLoading(true);
     Promise.all([
       fetch('/api/me', { headers: { 'x-telegram-init-data': initData } }).then(r => r.json()),
       fetch('/api/campaigns').then(r => r.json()),
     ]).then(([meData, campData]) => {
-      setProfile(meData.profile);
+      setProfile(meData.profile ?? null);
       setCampaigns(campData.campaigns || []);
     }).catch(console.error)
       .finally(() => setLoading(false));

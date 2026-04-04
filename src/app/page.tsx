@@ -19,13 +19,28 @@ export default function App() {
   const [tgUser, setTgUser] = useState<any>(null);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
-      const tg = window.Telegram.WebApp;
+    const applyTg = () => {
+      const tg = window.Telegram?.WebApp;
+      if (!tg) return false;
       tg.expand();
       tg.ready();
-      setInitData(tg.initData || '');
-      setTgUser(tg.initDataUnsafe?.user || null);
-    }
+      const data = tg.initData || '';
+      const user = tg.initDataUnsafe?.user || null;
+      setInitData(data);
+      setTgUser(user);
+      return true;
+    };
+
+    // Try immediately
+    if (applyTg()) return;
+
+    // SDK might still be loading on mobile — retry in 200ms, 600ms, 1200ms
+    const timers = [
+      setTimeout(() => applyTg(), 200),
+      setTimeout(() => applyTg(), 600),
+      setTimeout(() => applyTg(), 1200),
+    ];
+    return () => timers.forEach(clearTimeout);
   }, []);
 
   // Sticky header (user info) visible on home tab
