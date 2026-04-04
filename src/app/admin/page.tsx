@@ -102,6 +102,41 @@ export default async function AdminPage({
     redirect(`/admin?key=${formData.get('_key')}&tab=campaigns`);
   }
 
+  async function broadcastCampaign(formData: FormData) {
+    'use server';
+    const prismaInner = getPrisma();
+    const campaignId = formData.get('campaignId') as string;
+    const _key = formData.get('_key') as string;
+
+    const campaign = await prismaInner.campaign.findUnique({ where: { id: campaignId } });
+    if (!campaign) redirect(`/admin?key=${_key}&tab=campaigns`);
+
+    // Get all approved creators with telegram accounts
+    const creators = await prismaInner.creatorProfile.findMany({
+      where: { status: 'approved' },
+      include: { user: true },
+    });
+
+    // Fire-and-forget: send to each creator
+    // We import notifyNewCampaign dynamically to keep this server-action friendly
+    const { notifyNewCampaign } = await import('@/lib/notify');
+
+    let sent = 0;
+    for (const creator of creators) {
+      if (creator.user?.telegram_id) {
+        await notifyNewCampaign(
+          creator.user.telegram_id,
+          campaign!.title,
+          campaign!.rewardPerStory,
+        ).catch(() => {}); // ignore individual failures
+        sent++;
+      }
+    }
+
+    console.log(`[broadcast] Sent campaign "${campaign!.title}" to ${sent} creators`);
+    redirect(`/admin?key=${_key}&tab=campaigns`);
+  }
+
   async function verifyProof(formData: FormData) {
     'use server';
     const prismaInner = getPrisma();
@@ -392,17 +427,32 @@ export default async function AdminPage({
                             <span style={{ fontSize: 11, fontWeight: 700, color: cs.color }}>{cs.label}</span>
                           </td>
                           <td style={c.td}>
-                            <form action={deleteCampaign}>
-                              <input type="hidden" name="id" value={camp.id} />
-                              <input type="hidden" name="_key" value={key} />
-                              <button type="submit" style={{
-                                background: 'rgba(255,0,128,0.1)', border: '1px solid rgba(255,0,128,0.3)',
-                                color: '#ff0080', borderRadius: 6, padding: '4px 10px', fontSize: 11,
-                                cursor: 'pointer', fontWeight: 600,
-                              }}>
-                                Удалить
-                              </button>
-                            </form>
+                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                              {/* Broadcast button */}
+                              <form action={broadcastCampaign} style={{ display: 'inline' }}>
+                                <input type="hidden" name="campaignId" value={camp.id} />
+                                <input type="hidden" name="_key" value={key} />
+                                <button type="submit" style={{
+                                  background: 'rgba(0,229,255,0.1)', border: '1px solid rgba(0,229,255,0.3)',
+                                  color: '#00e5ff', borderRadius: 6, padding: '4px 10px', fontSize: 11,
+                                  cursor: 'pointer', fontWeight: 600,
+                                }}>
+                                  📢 Разослать
+                                </button>
+                              </form>
+                              {/* Delete button */}
+                              <form action={deleteCampaign} style={{ display: 'inline' }}>
+                                <input type="hidden" name="id" value={camp.id} />
+                                <input type="hidden" name="_key" value={key} />
+                                <button type="submit" style={{
+                                  background: 'rgba(255,0,128,0.1)', border: '1px solid rgba(255,0,128,0.3)',
+                                  color: '#ff0080', borderRadius: 6, padding: '4px 10px', fontSize: 11,
+                                  cursor: 'pointer', fontWeight: 600,
+                                }}>
+                                  Удалить
+                                </button>
+                              </form>
+                            </div>
                           </td>
                         </tr>
                       );
