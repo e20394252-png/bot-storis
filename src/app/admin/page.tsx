@@ -45,13 +45,18 @@ export default async function AdminPage({
   }
 
   const prisma = getPrisma();
-  const [profiles, campaigns] = await Promise.all([
+  const [profiles, campaigns, pendingProofs] = await Promise.all([
     prisma.creatorProfile.findMany({
       include: { user: true },
       orderBy: { createdAt: 'desc' }
     }),
     prisma.campaign.findMany({
       orderBy: { createdAt: 'desc' }
+    }),
+    prisma.assignment.findMany({
+      where: { status: 'published' },
+      include: { campaign: true, creator: { include: { user: true } } },
+      orderBy: { updatedAt: 'desc' },
     }),
   ]);
 
@@ -88,6 +93,34 @@ export default async function AdminPage({
     await prismaInner.campaign.delete({ where: { id } });
     revalidatePath('/admin');
     redirect(`/admin?key=${formData.get('_key')}&tab=campaigns`);
+  }
+
+  async function verifyProof(formData: FormData) {
+    'use server';
+    const prismaInner = getPrisma();
+    const assignmentId = formData.get('assignmentId') as string;
+    const action = formData.get('action') as string;
+    const _key = formData.get('_key') as string;
+
+    const assignment = await prismaInner.assignment.findUnique({
+      where: { id: assignmentId },
+      include: { campaign: true },
+    });
+    if (!assignment) redirect(`/admin?key=${_key}&tab=proofs`);
+
+    if (action === 'verify') {
+      await prismaInner.$transaction([
+        prismaInner.assignment.update({ where: { id: assignmentId }, data: { status: 'verified' } }),
+        prismaInner.creatorProfile.update({
+          where: { id: assignment.creatorId },
+          data: { balance: { increment: assignment.campaign.rewardPerStory } },
+        }),
+      ]);
+    } else {
+      await prismaInner.assignment.update({ where: { id: assignmentId }, data: { status: 'rejected' } });
+    }
+    revalidatePath('/admin');
+    redirect(`/admin?key=${_key}&tab=proofs`);
   }
 
   // ─── Styles ───────────────────────────────────────────────
@@ -135,6 +168,7 @@ export default async function AdminPage({
       <div style={{ padding: '16px 28px', borderBottom: '1px solid rgba(0,229,255,0.08)', display: 'flex', gap: 10 }}>
         {tabBtn('creators', 'Креаторы', profiles.length)}
         {tabBtn('campaigns', 'Кампании', campaigns.length)}
+        {tabBtn('proofs', '🔍 На проверке', pendingProofs.length)}
       </div>
 
       <div style={{ padding: '24px 28px' }}>
@@ -273,6 +307,57 @@ export default async function AdminPage({
                     })}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </div>
+        )}
+        {/* ── PROOFS TAB ─────────────────────────────────── */}
+        {activeTab === 'proofs' && (
+          <div>
+            {pendingProofs.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px', color: '#6870a0' }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>🎉</div>
+                <div>Нет пруфов на проверке</div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                {pendingProofs.map((a: any) => (
+                  <div key={a.id} style={{ background: '#0d0d24', border: '1px solid rgba(0,229,255,0.15)', borderRadius: 12, overflow: 'hidden' }}>
+                    <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(0,229,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 15 }}>{a.campaign?.title}</div>
+                        <div style={{ fontSize: 12, color: '#6870a0', marginTop: 2 }}>
+                          {a.creator?.socialUsername || a.creator?.user?.username || '—'} · {a.campaign?.rewardPerStory?.toLocaleString()}₽
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 11, color: '#b400ff', background: 'rgba(180,0,255,0.1)', border: '1px solid rgba(180,0,255,0.3)', borderRadius: 4, padding: '4px 10px', fontWeight: 700 }}>НА ПРОВЕРКЕ</div>
+                    </div>
+                    {a.proofUrl && (
+                      <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(0,229,255,0.08)' }}>
+                        <div style={{ fontSize: 10, color: '#6870a0', letterSpacing: '0.08em', marginBottom: 10 }}>// СКРИНШОТ_ПРУФА</div>
+                        <img src={a.proofUrl} alt="Proof" style={{ maxWidth: '100%', maxHeight: 400, borderRadius: 8, border: '1px solid rgba(0,229,255,0.15)', objectFit: 'contain', display: 'block' }} />
+                      </div>
+                    )}
+                    <div style={{ padding: '14px 20px', display: 'flex', gap: 12 }}>
+                      <form action={verifyProof} style={{ flex: 1 }}>
+                        <input type="hidden" name="assignmentId" value={a.id} />
+                        <input type="hidden" name="action" value="verify" />
+                        <input type="hidden" name="_key" value={key} />
+                        <button type="submit" style={{ width: '100%', padding: '11px', fontSize: 13, background: 'linear-gradient(135deg, #00e5ff, #00ff88)', border: 'none', borderRadius: 8, color: '#000', fontWeight: 700, cursor: 'pointer' }}>
+                          ✓ ОДОБРИТЬ +{a.campaign?.rewardPerStory?.toLocaleString()}₽
+                        </button>
+                      </form>
+                      <form action={verifyProof} style={{ flex: 1 }}>
+                        <input type="hidden" name="assignmentId" value={a.id} />
+                        <input type="hidden" name="action" value="reject" />
+                        <input type="hidden" name="_key" value={key} />
+                        <button type="submit" style={{ width: '100%', padding: '11px', fontSize: 13, background: 'rgba(255,0,128,0.1)', border: '1px solid rgba(255,0,128,0.3)', borderRadius: 8, color: '#ff0080', fontWeight: 700, cursor: 'pointer' }}>
+                          ✗ ОТКЛОНИТЬ
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
