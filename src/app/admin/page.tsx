@@ -46,7 +46,7 @@ export default async function AdminPage({
   }
 
   const prisma = getPrisma();
-  const [profiles, campaigns, pendingProofs] = await Promise.all([
+  const [profiles, campaigns, pendingProofs, pendingWithdrawals] = await Promise.all([
     prisma.creatorProfile.findMany({
       include: { user: true },
       orderBy: { createdAt: 'desc' }
@@ -58,6 +58,11 @@ export default async function AdminPage({
       where: { status: 'published' },
       include: { campaign: true, creator: { include: { user: true } } },
       orderBy: { updatedAt: 'desc' },
+    }),
+    prisma.withdrawal.findMany({
+      where: { status: 'pending' },
+      include: { user: { include: { creatorProfile: true } } },
+      orderBy: { createdAt: 'desc' },
     }),
   ]);
 
@@ -137,6 +142,35 @@ export default async function AdminPage({
     redirect(`/admin?key=${_key}&tab=proofs`);
   }
 
+  async function processWithdrawal(formData: FormData) {
+    'use server';
+    const prismaInner = getPrisma();
+    const withdrawalId = formData.get('withdrawalId') as string;
+    const action = formData.get('action') as string; // 'paid' | 'reject'
+    const _key = formData.get('_key') as string;
+
+    if (action === 'paid') {
+      await prismaInner.withdrawal.update({ where: { id: withdrawalId }, data: { status: 'paid' } });
+    } else {
+      // Refund balance on rejection
+      const w = await prismaInner.withdrawal.findUnique({
+        where: { id: withdrawalId },
+        include: { user: { include: { creatorProfile: true } } },
+      });
+      if (w?.user?.creatorProfile) {
+        await prismaInner.$transaction([
+          prismaInner.withdrawal.update({ where: { id: withdrawalId }, data: { status: 'rejected' } }),
+          prismaInner.creatorProfile.update({
+            where: { id: w.user.creatorProfile.id },
+            data: { balance: { increment: w.amount } },
+          }),
+        ]);
+      }
+    }
+    revalidatePath('/admin');
+    redirect(`/admin?key=${_key}&tab=withdrawals`);
+  }
+
   // ─── Styles ───────────────────────────────────────────────
   const statusStyle: Record<string, { color: string; bg: string; border: string; label: string }> = {
     pending:  { color: '#ffc800', bg: 'rgba(255,200,0,0.1)',   border: 'rgba(255,200,0,0.3)',   label: 'На проверке' },
@@ -182,7 +216,8 @@ export default async function AdminPage({
       <div style={{ padding: '16px 28px', borderBottom: '1px solid rgba(0,229,255,0.08)', display: 'flex', gap: 10 }}>
         {tabBtn('creators', 'Креаторы', profiles.length)}
         {tabBtn('campaigns', 'Кампании', campaigns.length)}
-        {tabBtn('proofs', '🔍 На проверке', pendingProofs.length)}
+        {tabBtn('proofs', '🔍 Проверка', pendingProofs.length)}
+        {tabBtn('withdrawals', '💸 Выводы', pendingWithdrawals.length)}
       </div>
 
       <div style={{ padding: '24px 28px' }}>
@@ -363,6 +398,55 @@ export default async function AdminPage({
                       </form>
                       <form action={verifyProof} style={{ flex: 1 }}>
                         <input type="hidden" name="assignmentId" value={a.id} />
+                        <input type="hidden" name="action" value="reject" />
+                        <input type="hidden" name="_key" value={key} />
+                        <button type="submit" style={{ width: '100%', padding: '11px', fontSize: 13, background: 'rgba(255,0,128,0.1)', border: '1px solid rgba(255,0,128,0.3)', borderRadius: 8, color: '#ff0080', fontWeight: 700, cursor: 'pointer' }}>
+                          ✗ ОТКЛОНИТЬ
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {/* ── WITHDRAWALS TAB ─────────────────────────────── */}
+        {activeTab === 'withdrawals' && (
+          <div>
+            {pendingWithdrawals.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px', color: '#6870a0' }}>
+                <div style={{ fontSize: 40, marginBottom: 12 }}>🎉</div>
+                <div>Нет заявок на вывод</div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {pendingWithdrawals.map((w: any) => (
+                  <div key={w.id} style={{ background: '#0d0d24', border: '1px solid rgba(0,229,255,0.15)', borderRadius: 12, overflow: 'hidden' }}>
+                    <div style={{ padding: '16px 20px', borderBottom: '1px solid rgba(0,229,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontSize: 22, fontWeight: 800, fontFamily: 'monospace', color: '#00ff88' }}>{w.amount.toLocaleString()} ₽</div>
+                        <div style={{ fontSize: 12, color: '#6870a0', marginTop: 2 }}>
+                          @{w.user?.username || '—'} · {new Date(w.createdAt).toLocaleDateString('ru-RU')}
+                        </div>
+                      </div>
+                      <div style={{ fontSize: 11, color: '#ffc800', background: 'rgba(255,200,0,0.1)', border: '1px solid rgba(255,200,0,0.3)', borderRadius: 4, padding: '4px 10px', fontWeight: 700 }}>ОЖИДАЕТ</div>
+                    </div>
+                    <div style={{ padding: '12px 20px', borderBottom: '1px solid rgba(0,229,255,0.08)' }}>
+                      <div style={{ fontSize: 10, color: '#6870a0', letterSpacing: '0.08em', marginBottom: 6 }}>// РЕКВИЗИТЫ</div>
+                      <div style={{ fontSize: 13, color: '#e0e8ff', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>{w.details}</div>
+                    </div>
+                    <div style={{ padding: '14px 20px', display: 'flex', gap: 12 }}>
+                      <form action={processWithdrawal} style={{ flex: 1 }}>
+                        <input type="hidden" name="withdrawalId" value={w.id} />
+                        <input type="hidden" name="action" value="paid" />
+                        <input type="hidden" name="_key" value={key} />
+                        <button type="submit" style={{ width: '100%', padding: '11px', fontSize: 13, background: 'linear-gradient(135deg, #00e5ff, #00ff88)', border: 'none', borderRadius: 8, color: '#000', fontWeight: 700, cursor: 'pointer' }}>
+                          ✓ ВЫПЛАЧЕНО
+                        </button>
+                      </form>
+                      <form action={processWithdrawal} style={{ flex: 1 }}>
+                        <input type="hidden" name="withdrawalId" value={w.id} />
                         <input type="hidden" name="action" value="reject" />
                         <input type="hidden" name="_key" value={key} />
                         <button type="submit" style={{ width: '100%', padding: '11px', fontSize: 13, background: 'rgba(255,0,128,0.1)', border: '1px solid rgba(255,0,128,0.3)', borderRadius: 8, color: '#ff0080', fontWeight: 700, cursor: 'pointer' }}>

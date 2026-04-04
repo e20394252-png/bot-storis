@@ -6,7 +6,7 @@ export async function POST(req: Request) {
   try {
     const prisma = getPrisma();
     const body = await req.json();
-    const { initData, socialUsername, geo, niche, avgStoryViews, pricePerStory, base64Image } = body;
+    const { initData, socialUsername, geo, niche, avgStoryViews, base64Image } = body;
 
     // 1. Verify User from Telegram Mini App
     const isValid = validateInitData(initData, process.env.TELEGRAM_BOT_TOKEN!);
@@ -43,7 +43,6 @@ export async function POST(req: Request) {
         geo,
         niche,
         avgStoryViews: parseInt(avgStoryViews) || 0,
-        pricePerStory: parseInt(pricePerStory) || 0,
         status: 'pending',
       },
       create: {
@@ -52,7 +51,6 @@ export async function POST(req: Request) {
         geo,
         niche,
         avgStoryViews: parseInt(avgStoryViews) || 0,
-        pricePerStory: parseInt(pricePerStory) || 0,
         status: 'pending',
       }
     });

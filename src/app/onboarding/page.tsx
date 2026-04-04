@@ -40,7 +40,6 @@ export default function OnboardingPage() {
     geo: '',
     niche: '',
     avgStoryViews: '',
-    pricePerStory: ''
   });
 
   const [base64Image, setBase64Image] = useState('');
@@ -67,7 +66,6 @@ export default function OnboardingPage() {
       geo: 'Москва',
       niche: 'lifestyle',
       avgStoryViews: '5000',
-      pricePerStory: '15000'
     });
     const testBase64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
     setBase64Image(testBase64);
@@ -296,38 +294,21 @@ export default function OnboardingPage() {
           </div>
         </div>
 
-        {/* Views + Price */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <div>
-            <label style={{ fontSize: 11, letterSpacing: '0.08em', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>
-              Просмотры
-            </label>
-            <input
-              required
-              type="number"
-              name="avgStoryViews"
-              value={formData.avgStoryViews}
-              onChange={handleChange}
-              placeholder="5000"
-              className="cyber-input"
-              style={inputStyle}
-            />
-          </div>
-          <div>
-            <label style={{ fontSize: 11, letterSpacing: '0.08em', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>
-              Цена (₽)
-            </label>
-            <input
-              required
-              type="number"
-              name="pricePerStory"
-              value={formData.pricePerStory}
-              onChange={handleChange}
-              placeholder="15000"
-              className="cyber-input"
-              style={inputStyle}
-            />
-          </div>
+        {/* Views — full width now */}
+        <div>
+          <label style={{ fontSize: 11, letterSpacing: '0.08em', color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: 8 }}>
+            Средние просмотры сторис
+          </label>
+          <input
+            required
+            type="number"
+            name="avgStoryViews"
+            value={formData.avgStoryViews}
+            onChange={handleChange}
+            placeholder="5000"
+            className="cyber-input"
+            style={inputStyle}
+          />
         </div>
 
         {/* Image Upload */}
