@@ -1,6 +1,7 @@
 import { getPrisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { notifyProofApproved, notifyProofRejected } from '@/lib/notify';
 
 export const dynamic = 'force-dynamic';
 
@@ -104,20 +105,33 @@ export default async function AdminPage({
 
     const assignment = await prismaInner.assignment.findUnique({
       where: { id: assignmentId },
-      include: { campaign: true },
+      include: { campaign: true, creator: { include: { user: true } } },
     });
     if (!assignment) redirect(`/admin?key=${_key}&tab=proofs`);
+
+    const telegramId = assignment!.creator?.user?.telegram_id;
+    const username = assignment!.creator?.user?.username;
+    const campaignTitle = assignment!.campaign?.title || 'Кампания';
+    const reward = assignment!.campaign?.rewardPerStory || 0;
 
     if (action === 'verify') {
       await prismaInner.$transaction([
         prismaInner.assignment.update({ where: { id: assignmentId }, data: { status: 'verified' } }),
         prismaInner.creatorProfile.update({
-          where: { id: assignment.creatorId },
-          data: { balance: { increment: assignment.campaign.rewardPerStory } },
+          where: { id: assignment!.creatorId },
+          data: { balance: { increment: reward } },
         }),
       ]);
+      // Notify creator about payment
+      if (telegramId) {
+        notifyProofApproved(telegramId, campaignTitle, reward, username).catch(console.error);
+      }
     } else {
       await prismaInner.assignment.update({ where: { id: assignmentId }, data: { status: 'rejected' } });
+      // Notify creator about rejection
+      if (telegramId) {
+        notifyProofRejected(telegramId, campaignTitle, username).catch(console.error);
+      }
     }
     revalidatePath('/admin');
     redirect(`/admin?key=${_key}&tab=proofs`);
