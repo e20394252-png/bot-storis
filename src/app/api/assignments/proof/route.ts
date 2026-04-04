@@ -61,7 +61,7 @@ async function sendProofToN8n(
   creatorUsername: string | null,
   campaignTitle: string
 ) {
-  const n8nUrl = process.env.N8N_WEBHOOK_URL; // same URL, different type
+  const n8nUrl = process.env.N8N_PROOF_WEBHOOK_URL; // separate proof workflow
   if (!n8nUrl) return;
 
   try {
