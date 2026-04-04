@@ -90,7 +90,7 @@ export default function App() {
           />
         )}
         {activeTab === 'tasks' && (
-          <TasksView onBack={() => setActiveTab('home')} />
+          <TasksView initData={initData} onBack={() => setActiveTab('home')} />
         )}
         {activeTab === 'my-tasks' && (
           <MyTasksView onBack={() => setActiveTab('home')} />

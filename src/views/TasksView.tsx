@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import BackHeader from '@/components/BackHeader';
 
 interface TasksViewProps {
+  initData: string;
   onBack: () => void;
 }
 
@@ -15,10 +16,13 @@ const NICHE_BADGE: Record<string, string> = {
   crypto: 'cyber-badge-purple', beauty: 'cyber-badge-pink', tech: 'cyber-badge',
 };
 
-export default function TasksView({ onBack }: TasksViewProps) {
+export default function TasksView({ initData, onBack }: TasksViewProps) {
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterNiche, setFilterNiche] = useState('all');
+  const [applying, setApplying] = useState<string | null>(null);
+  const [applied, setApplied] = useState<Set<string>>(new Set());
+  const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
   useEffect(() => {
     fetch('/api/campaigns')
@@ -28,12 +32,53 @@ export default function TasksView({ onBack }: TasksViewProps) {
       .finally(() => setLoading(false));
   }, []);
 
+  const showToast = (msg: string, ok: boolean) => {
+    setToast({ msg, ok });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const handleApply = async (campaignId: string) => {
+    if (!initData) { showToast('Откройте приложение через Telegram', false); return; }
+    setApplying(campaignId);
+    try {
+      const res = await fetch('/api/campaigns/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-telegram-init-data': initData },
+        body: JSON.stringify({ campaignId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Ошибка');
+      setApplied(prev => new Set([...prev, campaignId]));
+      showToast('Вы успешно откликнулись! ✓', true);
+    } catch (err: any) {
+      showToast(err.message, false);
+    } finally {
+      setApplying(null);
+    }
+  };
+
   const filtered = filterNiche === 'all' ? campaigns : campaigns.filter(c => c.niche === filterNiche);
   const niches = ['all', ...Array.from(new Set(campaigns.map(c => c.niche).filter(Boolean)))];
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <BackHeader title="Задания" subtitle="Доступные кампании" onBack={onBack} />
+      <BackHeader title="Задания" subtitle={`${campaigns.length} активных кампаний`} onBack={onBack} />
+
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)',
+          zIndex: 100, padding: '12px 20px', borderRadius: 10,
+          background: toast.ok ? 'rgba(0,255,136,0.15)' : 'rgba(255,0,128,0.15)',
+          border: `1px solid ${toast.ok ? 'rgba(0,255,136,0.4)' : 'rgba(255,0,128,0.4)'}`,
+          color: toast.ok ? '#00ff88' : '#ff0080',
+          fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          transition: 'opacity 0.3s',
+        }}>
+          {toast.msg}
+        </div>
+      )}
 
       <div style={{ padding: '16px 20px', flex: 1 }}>
         {/* Filter chips */}
@@ -63,53 +108,68 @@ export default function TasksView({ onBack }: TasksViewProps) {
           <div style={{ textAlign: 'center', paddingTop: 60 }}>
             <div style={{ fontSize: 40, marginBottom: 16 }}>📭</div>
             <div style={{ fontSize: 14, color: 'var(--text-muted)' }}>Нет доступных заданий</div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.2)', marginTop: 6 }}>Рекламодатели ещё не добавили кампании</div>
+            <div style={{ fontSize: 12, color: 'rgba(255,255,255,0.2)', marginTop: 6 }}>
+              {filterNiche === 'all' ? 'Рекламодатели ещё не добавили кампании' : 'Попробуйте другую тематику'}
+            </div>
           </div>
         )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {filtered.map((c: any) => (
-            <div key={c.id} className="cyber-card" style={{ padding: '18px', cursor: 'pointer' }}>
-              {/* Header row */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                    <span className={`cyber-badge ${NICHE_BADGE[c.niche] || 'cyber-badge'}`}>
-                      {NICHE_LABELS[c.niche] || c.niche}
-                    </span>
-                    {c.geo && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>📍 {c.geo}</span>}
-                  </div>
-                  <div style={{ fontWeight: 700, fontSize: 16, letterSpacing: '-0.01em', lineHeight: 1.3 }}>{c.title}</div>
-                  {c.description && (
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.5 }}>
-                      {c.description.slice(0, 80)}{c.description.length > 80 ? '...' : ''}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 20 }}>
+          {filtered.map((c: any) => {
+            const isApplied = applied.has(c.id);
+            const isApplying = applying === c.id;
+            return (
+              <div key={c.id} className="cyber-card" style={{ padding: '18px' }}>
+                {/* Header row */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', gap: 6, marginBottom: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <span className={`cyber-badge ${NICHE_BADGE[c.niche] || 'cyber-badge'}`}>
+                        {NICHE_LABELS[c.niche] || c.niche || 'Общее'}
+                      </span>
+                      {c.geo && <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>📍 {c.geo}</span>}
                     </div>
+                    <div style={{ fontWeight: 700, fontSize: 16, letterSpacing: '-0.01em', lineHeight: 1.3 }}>{c.title}</div>
+                    {c.description && (
+                      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6, lineHeight: 1.5 }}>
+                        {c.description.slice(0, 100)}{c.description.length > 100 ? '...' : ''}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 16 }}>
+                    <div style={{ fontSize: 22, fontWeight: 800, fontFamily: 'monospace', color: 'var(--neon-green)', lineHeight: 1 }}>
+                      {(c.rewardPerStory || 0).toLocaleString()}₽
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>за сторис</div>
+                  </div>
+                </div>
+
+                {/* Stats row */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', gap: 16 }}>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>🎯 {c.creatorsNeeded} мест</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>💰 {(c.budget || 0).toLocaleString()}₽</span>
+                  </div>
+                  {isApplied ? (
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, letterSpacing: '0.06em',
+                      color: 'var(--neon-green)', background: 'rgba(0,255,136,0.1)',
+                      border: '1px solid rgba(0,255,136,0.3)', borderRadius: 6, padding: '6px 14px'
+                    }}>✓ ОТКЛИК ОТПРАВЛЕН</span>
+                  ) : (
+                    <button
+                      className="cyber-btn"
+                      disabled={isApplying}
+                      onClick={() => handleApply(c.id)}
+                      style={{ fontSize: 11, padding: '6px 16px', cursor: isApplying ? 'wait' : 'pointer', opacity: isApplying ? 0.7 : 1 }}
+                    >
+                      {isApplying ? '...' : 'Откликнуться'}
+                    </button>
                   )}
                 </div>
-                <div style={{ textAlign: 'right', flexShrink: 0, marginLeft: 16 }}>
-                  <div style={{ fontSize: 22, fontWeight: 800, fontFamily: 'monospace', color: 'var(--neon-green)', lineHeight: 1 }}>
-                    {(c.rewardPerStory || 0).toLocaleString()}₽
-                  </div>
-                  <div style={{ fontSize: 10, color: 'var(--text-muted)', marginTop: 2 }}>за сторис</div>
-                </div>
               </div>
-
-              {/* Stats row */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div style={{ display: 'flex', gap: 16 }}>
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                    🎯 {c.creatorsNeeded} мест
-                  </span>
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                    💰 бюджет {(c.budget || 0).toLocaleString()}₽
-                  </span>
-                </div>
-                <button className="cyber-btn" style={{ fontSize: 11, padding: '6px 16px', cursor: 'pointer' }}>
-                  Откликнуться
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
