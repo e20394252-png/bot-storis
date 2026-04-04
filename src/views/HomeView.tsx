@@ -7,6 +7,7 @@ interface HomeViewProps {
   initData: string;
   tgUser: any;
   onGoToTasks: () => void;
+  onOpenCampaign: (id: string) => void;
 }
 
 function StatusBadge({ status }: { status: string }) {
@@ -25,7 +26,7 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-export default function HomeView({ initData, tgUser, onGoToTasks }: HomeViewProps) {
+export default function HomeView({ initData, tgUser, onGoToTasks, onOpenCampaign }: HomeViewProps) {
   const router = useRouter();
   const [profile, setProfile] = useState<any>(null);
   const [campaigns, setCampaigns] = useState<any[]>([]);
@@ -200,7 +201,12 @@ export default function HomeView({ initData, tgUser, onGoToTasks }: HomeViewProp
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {campaigns.slice(0, 3).map((c: any) => (
-            <div key={c.id} className="cyber-card" style={{ padding: '16px', cursor: 'pointer' }}>
+            <div
+              key={c.id}
+              className="cyber-card"
+              onClick={() => onOpenCampaign(c.id)}
+              style={{ padding: '16px', cursor: 'pointer', transition: 'border-color 0.15s' }}
+            >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>

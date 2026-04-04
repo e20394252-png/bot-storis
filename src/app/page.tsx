@@ -6,6 +6,7 @@ import HomeView from '@/views/HomeView';
 import TasksView from '@/views/TasksView';
 import MyTasksView from '@/views/MyTasksView';
 import ProfileView from '@/views/ProfileView';
+import CampaignDetailView from '@/views/CampaignDetailView';
 
 declare global {
   interface Window { Telegram: any; }
@@ -17,6 +18,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('home');
   const [initData, setInitData] = useState('');
   const [tgUser, setTgUser] = useState<any>(null);
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
 
   useEffect(() => {
     const applyTg = () => {
@@ -31,10 +33,7 @@ export default function App() {
       return true;
     };
 
-    // Try immediately
     if (applyTg()) return;
-
-    // SDK might still be loading on mobile — retry in 200ms, 600ms, 1200ms
     const timers = [
       setTimeout(() => applyTg(), 200),
       setTimeout(() => applyTg(), 600),
@@ -43,8 +42,24 @@ export default function App() {
     return () => timers.forEach(clearTimeout);
   }, []);
 
-  // Sticky header (user info) visible on home tab
-  const showHeader = activeTab === 'home';
+  const openCampaign = (id: string) => setSelectedCampaignId(id);
+  const closeCampaign = () => setSelectedCampaignId(null);
+
+  const showHeader = activeTab === 'home' && !selectedCampaignId;
+
+  // Campaign detail overlay — renders on top of any tab
+  if (selectedCampaignId) {
+    return (
+      <div style={{ minHeight: '100vh', position: 'relative', zIndex: 1 }}>
+        <CampaignDetailView
+          campaignId={selectedCampaignId}
+          initData={initData}
+          onBack={closeCampaign}
+        />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', position: 'relative', zIndex: 1 }}>
@@ -83,8 +98,6 @@ export default function App() {
               )}
             </div>
           </div>
-
-          {/* Logo */}
           <div style={{ textAlign: 'right' }}>
             <div style={{
               fontSize: 11, fontWeight: 800, letterSpacing: '0.08em',
@@ -102,10 +115,15 @@ export default function App() {
             initData={initData}
             tgUser={tgUser}
             onGoToTasks={() => setActiveTab('tasks')}
+            onOpenCampaign={openCampaign}
           />
         )}
         {activeTab === 'tasks' && (
-          <TasksView initData={initData} onBack={() => setActiveTab('home')} />
+          <TasksView
+            initData={initData}
+            onBack={() => setActiveTab('home')}
+            onOpenCampaign={openCampaign}
+          />
         )}
         {activeTab === 'my-tasks' && (
           <MyTasksView initData={initData} onBack={() => setActiveTab('home')} />
@@ -119,10 +137,7 @@ export default function App() {
         )}
       </main>
 
-      {/* Bottom navigation — always visible */}
       <BottomNav activeTab={activeTab} onChange={setActiveTab} />
-
-      {/* Spin keyframe */}
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
   );

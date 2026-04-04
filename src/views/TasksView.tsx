@@ -6,6 +6,7 @@ import BackHeader from '@/components/BackHeader';
 interface TasksViewProps {
   initData: string;
   onBack: () => void;
+  onOpenCampaign: (id: string) => void;
 }
 
 const NICHE_LABELS: Record<string, string> = {
@@ -16,7 +17,7 @@ const NICHE_BADGE: Record<string, string> = {
   crypto: 'cyber-badge-purple', beauty: 'cyber-badge-pink', tech: 'cyber-badge',
 };
 
-export default function TasksView({ initData, onBack }: TasksViewProps) {
+export default function TasksView({ initData, onBack, onOpenCampaign }: TasksViewProps) {
   const [campaigns, setCampaigns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterNiche, setFilterNiche] = useState('all');
@@ -128,13 +129,15 @@ export default function TasksView({ initData, onBack }: TasksViewProps) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 20 }}>
           {filtered.map((c: any) => {
             const assignStatus = statusMap[c.id];
-            // Can apply if: no assignment, or previous was rejected
-            const isBlocked = assignStatus && assignStatus !== 'rejected';
-            const isRejected = assignStatus === 'rejected';
+            const isApplied = assignStatus && assignStatus !== 'rejected';
             const isApplying = applying === c.id;
-
             return (
-              <div key={c.id} className="cyber-card" style={{ padding: '18px' }}>
+              <div
+                key={c.id}
+                className="cyber-card"
+                onClick={() => onOpenCampaign(c.id)}
+                style={{ padding: '18px', cursor: 'pointer' }}
+              >
                 {/* Header row */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
                   <div style={{ flex: 1 }}>
@@ -165,26 +168,18 @@ export default function TasksView({ initData, onBack }: TasksViewProps) {
                     <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>🎯 {c.creatorsNeeded} мест</span>
                     <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>💰 {(c.budget || 0).toLocaleString()}₽</span>
                   </div>
-                  {isBlocked ? (
+                  {isApplied ? (
                     <span style={{
                       fontSize: 11, fontWeight: 700, letterSpacing: '0.06em',
                       color: 'var(--neon-green)', background: 'rgba(0,255,136,0.1)',
                       border: '1px solid rgba(0,255,136,0.3)', borderRadius: 6, padding: '6px 14px'
-                    }}>✓ ОТКЛИК ОТПРАВЛЕН</span>
+                    }}>✓ УЧАСТВУЮ</span>
                   ) : (
-                    <button
-                      className="cyber-btn"
-                      disabled={isApplying}
-                      onClick={() => handleApply(c.id)}
-                      style={{
-                        fontSize: 11, padding: '6px 16px',
-                        cursor: isApplying ? 'wait' : 'pointer',
-                        opacity: isApplying ? 0.7 : 1,
-                        ...(isRejected ? { borderColor: 'rgba(255,200,0,0.5)', color: '#ffc800' } : {}),
-                      }}
-                    >
-                      {isApplying ? '...' : isRejected ? '↩ Повторить отклик' : 'Откликнуться'}
-                    </button>
+                    <span style={{
+                      fontSize: 11, fontWeight: 600, letterSpacing: '0.04em',
+                      color: 'var(--neon-cyan)', background: 'rgba(0,229,255,0.08)',
+                      border: '1px solid rgba(0,229,255,0.25)', borderRadius: 6, padding: '6px 14px'
+                    }}>Подробнее →</span>
                   )}
                 </div>
               </div>

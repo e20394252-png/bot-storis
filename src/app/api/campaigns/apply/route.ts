@@ -43,10 +43,13 @@ export async function POST(req: Request) {
       await prisma.assignment.delete({ where: { id: existing.id } });
     }
 
-    // Check campaign exists and is active
+    // Check campaign exists, is active, and has spots
     const campaign = await prisma.campaign.findUnique({ where: { id: campaignId } });
     if (!campaign || campaign.status !== 'active') {
       return NextResponse.json({ error: 'Кампания недоступна' }, { status: 404 });
+    }
+    if (campaign.creatorsNeeded <= 0) {
+      return NextResponse.json({ error: 'Все места заняты — кампания уже укомплектована' }, { status: 409 });
     }
 
     const assignment = await prisma.assignment.create({
