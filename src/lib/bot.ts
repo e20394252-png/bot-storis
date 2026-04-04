@@ -50,12 +50,16 @@ bot.on('callback_query', async (ctx) => {
     const reward = assignment.campaign?.rewardPerStory || 0;
 
     if (action === 'ok') {
-      // Approve: credit balance
+      // Approve: credit balance + decrement campaign spots
       await prisma.$transaction([
         prisma.assignment.update({ where: { id: assignmentId }, data: { status: 'verified' } }),
         prisma.creatorProfile.update({
           where: { id: assignment.creatorId },
           data: { balance: { increment: reward } },
+        }),
+        prisma.campaign.update({
+          where: { id: assignment.campaignId },
+          data: { creatorsNeeded: { decrement: 1 } },
         }),
       ]);
       await ctx.answerCbQuery(`✅ Одобрено! Начислено ${reward.toLocaleString()} ₽`);

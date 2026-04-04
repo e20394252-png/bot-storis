@@ -17,8 +17,9 @@ const STATUS_MAP: Record<string, { label: string; color: string; bg: string; bor
   rejected:  { label: 'ОТКЛОНЁН',    color: '#ff0080', bg: 'rgba(255,0,128,0.08)', border: 'rgba(255,0,128,0.3)',   icon: '❌' },
 };
 
-const STEPS = ['accepted', 'published', 'verified', 'paid'];
-const STEP_LABELS = ['Принято', 'На проверке', 'Одобрено', 'Оплачено'];
+// verified = money already on balance. 'paid' step removed — no separate payout step.
+const STEPS = ['accepted', 'published', 'verified'];
+const STEP_LABELS = ['Принято', 'На проверке', 'Начислено ✓'];
 
 function ProgressBar({ status }: { status: string }) {
   const idx = STEPS.indexOf(status);
@@ -238,17 +239,8 @@ export default function MyTasksView({ initData, onBack }: MyTasksViewProps) {
                   </div>
                 )}
 
-                {/* Verified — waiting payment */}
-                {a.status === 'verified' && (
-                  <div style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(0,255,136,0.06)', border: '1px solid rgba(0,255,136,0.2)', borderRadius: 8 }}>
-                    <div style={{ fontSize: 12, color: '#00ff88', lineHeight: 1.5 }}>
-                      ✅ Публикация подтверждена! Ожидайте начисления {(c?.rewardPerStory || 0).toLocaleString()}₽
-                    </div>
-                  </div>
-                )}
-
-                {/* Paid */}
-                {a.status === 'paid' && (
+                {/* Verified = money already credited to balance */}
+                {(a.status === 'verified' || a.status === 'paid') && (
                   <div style={{ marginTop: 12, padding: '10px 14px', background: 'rgba(0,255,136,0.08)', border: '1px solid rgba(0,255,136,0.3)', borderRadius: 8 }}>
                     <div style={{ fontSize: 12, color: '#00ff88', lineHeight: 1.5, fontWeight: 600 }}>
                       💸 {(c?.rewardPerStory || 0).toLocaleString()}₽ начислены на ваш баланс!

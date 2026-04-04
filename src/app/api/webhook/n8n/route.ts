@@ -56,6 +56,11 @@ export async function POST(req: Request) {
             where: { id: assignment.creatorId },
             data: { balance: { increment: reward } },
           }),
+          // Decrement available spots on the campaign
+          prisma.campaign.update({
+            where: { id: assignment.campaignId },
+            data: { creatorsNeeded: { decrement: 1 } },
+          }),
         ]);
         if (telegramId) notifyProofApproved(telegramId, title, reward, username).catch(console.error);
       } else {

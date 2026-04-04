@@ -126,6 +126,10 @@ export default async function AdminPage({
           where: { id: assignment!.creatorId },
           data: { balance: { increment: reward } },
         }),
+        prismaInner.campaign.update({
+          where: { id: assignment!.campaignId },
+          data: { creatorsNeeded: { decrement: 1 } },
+        }),
       ]);
       // Notify creator about payment
       if (telegramId) {
