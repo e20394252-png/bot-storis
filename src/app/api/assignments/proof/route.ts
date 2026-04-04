@@ -61,7 +61,7 @@ async function sendProofToN8n(
   creatorUsername: string | null,
   campaignTitle: string
 ) {
-  const n8nUrl = process.env.N8N_PROOF_WEBHOOK_URL;
+  const n8nUrl = process.env.N8N_WEBHOOK_URL; // same URL, different type
   if (!n8nUrl) return;
 
   try {
@@ -69,6 +69,7 @@ async function sendProofToN8n(
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        type: 'proof',          // <-- n8n IF-node routes on this
         assignmentId,
         base64Image,
         creatorUsername,
