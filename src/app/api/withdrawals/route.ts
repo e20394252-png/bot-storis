@@ -15,8 +15,8 @@ export async function POST(req: Request) {
     if (!tgUser) return NextResponse.json({ error: 'No user' }, { status: 400 });
 
     const { amount, details } = await req.json();
-    if (!amount || amount < 1000) {
-      return NextResponse.json({ error: 'Минимальная сумма вывода — 1000 ₽' }, { status: 400 });
+    if (!amount || amount < 1) {
+      return NextResponse.json({ error: 'Укажите сумму' }, { status: 400 });
     }
     if (!details?.trim()) {
       return NextResponse.json({ error: 'Укажите реквизиты для перевода' }, { status: 400 });

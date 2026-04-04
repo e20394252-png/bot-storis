@@ -154,15 +154,10 @@ export default function ProfileView({ initData, tgUser, onBack }: ProfileViewPro
                     </div>
                   )}
 
-                  {profile.balance >= 1000 && !showWithdraw && (
+                  {!showWithdraw && (
                     <button onClick={() => { setShowWithdraw(true); setWSuccess(false); }} className="cyber-btn-primary" style={{ width: '100%', padding: '12px', fontSize: 13, cursor: 'pointer', border: 'none' }}>
                       💸 ВЫВЕСТИ СРЕДСТВА
                     </button>
-                  )}
-                  {profile.balance < 1000 && profile.balance > 0 && (
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center' }}>
-                      Минимальная сумма вывода — 1000 ₽ (у вас {profile.balance.toLocaleString()} ₽)
-                    </div>
                   )}
 
                   {/* Withdrawal form */}
@@ -173,8 +168,8 @@ export default function ProfileView({ initData, tgUser, onBack }: ProfileViewPro
                         <div style={{ fontSize: 12, color: 'var(--neon-pink)', background: 'rgba(255,0,128,0.08)', border: '1px solid rgba(255,0,128,0.25)', borderRadius: 6, padding: '8px 12px' }}>{wError}</div>
                       )}
                       <div>
-                        <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>СУММА (мин. 1000 ₽, макс. {profile.balance.toLocaleString()} ₽)</label>
-                        <input type="number" required min={1000} max={profile.balance} value={wAmount} onChange={e => setWAmount(e.target.value)} placeholder="1000" style={inp} />
+                        <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>СУММА ₽ {profile.balance > 0 ? `(баланс: ${profile.balance.toLocaleString()} ₽)` : ''}</label>
+                        <input type="number" required min={1} max={profile.balance || undefined} value={wAmount} onChange={e => setWAmount(e.target.value)} placeholder="500" style={inp} />
                       </div>
                       <div>
                         <label style={{ fontSize: 11, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>РЕКВИЗИТЫ (номер карты, СБП, кошелёк)</label>
