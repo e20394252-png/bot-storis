@@ -190,7 +190,7 @@ export default function ProfileView({ initData, tgUser, onBack }: ProfileViewPro
                 {/* Stats */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
                   <Stat label="Просмотры сторис" value={(profile.avgStoryViews || 0).toLocaleString()} />
-                  <Stat label="Заданий выполнено" value="0" />
+                  <Stat label="Заданий выполнено" value={(profile.completedCount || 0).toString()} accent />
                 </div>
 
                 {/* Profile details */}

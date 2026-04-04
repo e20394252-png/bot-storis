@@ -32,6 +32,12 @@ export async function GET(req: Request) {
       return NextResponse.json({ user: null, profile: null });
     }
 
+    const completedCount = user.creatorProfile
+      ? await prisma.assignment.count({
+          where: { creatorId: user.creatorProfile.id, status: 'verified' }
+        })
+      : 0;
+
     return NextResponse.json({
       user: {
         id: user.id,
@@ -49,6 +55,7 @@ export async function GET(req: Request) {
         avgStoryViews: user.creatorProfile.avgStoryViews,
         pricePerStory: user.creatorProfile.pricePerStory,
         balance: user.creatorProfile.balance,
+        completedCount,
       } : null
     });
   } catch (err) {

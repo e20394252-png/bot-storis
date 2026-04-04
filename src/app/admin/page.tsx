@@ -80,6 +80,7 @@ export default async function AdminPage({
         advertiserId: admin.id,
         title: formData.get('title') as string,
         description: formData.get('description') as string || null,
+        requirements: formData.get('requirements') as string || null,
         niche: formData.get('niche') as string || null,
         geo: formData.get('geo') as string || null,
         budget: parseInt(formData.get('budget') as string) || 0,
@@ -217,7 +218,8 @@ export default async function AdminPage({
       </div>
 
       {/* Tabs */}
-      <div style={{ padding: '16px 28px', borderBottom: '1px solid rgba(0,229,255,0.08)', display: 'flex', gap: 10 }}>
+      <div style={{ padding: '16px 28px', borderBottom: '1px solid rgba(0,229,255,0.08)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        {tabBtn('stats', '📊 Дашборд', 0)}
         {tabBtn('creators', 'Креаторы', profiles.length)}
         {tabBtn('campaigns', 'Кампании', campaigns.length)}
         {tabBtn('proofs', '🔍 Проверка', pendingProofs.length)}
@@ -225,6 +227,49 @@ export default async function AdminPage({
       </div>
 
       <div style={{ padding: '24px 28px' }}>
+
+        {/* ── STATS TAB ─────────────────────────────────── */}
+        {activeTab === 'stats' && (() => {
+          const approved = profiles.filter((p: any) => p.status === 'approved').length;
+          const pending  = profiles.filter((p: any) => p.status === 'pending').length;
+          const activeCamps = campaigns.filter((c: any) => c.status === 'active').length;
+          const totalPaid = pendingWithdrawals.reduce((s: number, w: any) => s + w.amount, 0);
+          const stats = [
+            { label: 'Всего креаторов',       value: profiles.length.toString(),  color: '#00e5ff' },
+            { label: 'Одобрено',              value: approved.toString(),          color: '#00ff88' },
+            { label: 'На верификации',        value: pending.toString(),           color: '#ffc800' },
+            { label: 'Активных кампаний',     value: activeCamps.toString(),       color: '#00e5ff' },
+            { label: 'Сторис на проверке',    value: pendingProofs.length.toString(), color: '#b400ff' },
+            { label: 'Заявок на вывод (₽)',   value: totalPaid.toLocaleString(),    color: '#ff0080' },
+          ];
+          return (
+            <div>
+              <div style={{ fontSize: 10, color: '#b400ff', letterSpacing: '0.1em', marginBottom: 20 }}>// DASHBOARD_STATS</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginBottom: 32 }}>
+                {stats.map(s => (
+                  <div key={s.label} style={{ background: '#0d0d24', border: '1px solid rgba(0,229,255,0.12)', borderRadius: 12, padding: '20px' }}>
+                    <div style={{ fontSize: 28, fontWeight: 800, fontFamily: 'monospace', color: s.color }}>{s.value}</div>
+                    <div style={{ fontSize: 12, color: '#6870a0', marginTop: 6 }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontSize: 10, color: '#b400ff', letterSpacing: '0.1em', marginBottom: 14 }}>// ПОСЛЕДНИЕ_ПРУФЫ</div>
+              <div style={{ background: '#0d0d24', border: '1px solid rgba(0,229,255,0.12)', borderRadius: 12, overflow: 'hidden' }}>
+                {pendingProofs.length === 0 ? (
+                  <div style={{ padding: 24, textAlign: 'center', color: '#6870a0' }}>Нет пруфов на проверке</div>
+                ) : pendingProofs.slice(0, 5).map((a: any) => (
+                  <div key={a.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    <div>
+                      <div style={{ fontSize: 13, fontWeight: 600 }}>@{a.creator?.user?.username || '—'}</div>
+                      <div style={{ fontSize: 11, color: '#6870a0' }}>{a.campaign?.title}</div>
+                    </div>
+                    <div style={{ fontSize: 13, fontFamily: 'monospace', color: '#00ff88' }}>{a.campaign?.rewardPerStory?.toLocaleString()}₽</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ── CREATORS TAB ─────────────────────────────────── */}
         {activeTab === 'creators' && (
@@ -279,7 +324,11 @@ export default async function AdminPage({
                 </div>
                 <div style={{ gridColumn: '1 / -1' }}>
                   <label style={{ fontSize: 11, color: '#6870a0', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>ОПИСАНИЕ</label>
-                  <textarea name="description" rows={2} placeholder="Требования к публикации, особые условия..." style={{ ...c.inp, resize: 'vertical' as const }} />
+                  <textarea name="description" rows={2} placeholder="Краткое описание кампании..." style={{ ...c.inp, resize: 'vertical' as const }} />
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ fontSize: 11, color: '#00e5ff', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>ТЗ НА СТОРИС (задание для креатора) *</label>
+                  <textarea name="requirements" rows={4} required placeholder="Опишите подробно что нужно сделать: что снять, что упомянуть, хэштеги, ссылки и т.д." style={{ ...c.inp, resize: 'vertical' as const }} />
                 </div>
                 {[
                   { name: 'niche', label: 'НИША', placeholder: 'crypto / lifestyle / beauty...' },
