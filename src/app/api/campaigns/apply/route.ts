@@ -31,12 +31,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Профиль ещё не верифицирован' }, { status: 403 });
     }
 
-    // Check if already applied
+    // Check if already applied with an ACTIVE assignment (rejected = can re-apply)
     const existing = await prisma.assignment.findFirst({
       where: { campaignId, creatorId: user.creatorProfile.id }
     });
     if (existing) {
-      return NextResponse.json({ error: 'Вы уже откликнулись на эту кампанию' }, { status: 409 });
+      if (existing.status !== 'rejected') {
+        return NextResponse.json({ error: 'Вы уже откликнулись на эту кампанию' }, { status: 409 });
+      }
+      // Previous was rejected — delete it so we can apply fresh
+      await prisma.assignment.delete({ where: { id: existing.id } });
     }
 
     // Check campaign exists and is active

@@ -21,16 +21,28 @@ export default function TasksView({ initData, onBack }: TasksViewProps) {
   const [loading, setLoading] = useState(true);
   const [filterNiche, setFilterNiche] = useState('all');
   const [applying, setApplying] = useState<string | null>(null);
-  const [applied, setApplied] = useState<Set<string>>(new Set());
+  // campaignId → assignment status ('accepted','published','verified','rejected')
+  const [statusMap, setStatusMap] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
 
   useEffect(() => {
-    fetch('/api/campaigns')
-      .then(r => r.json())
-      .then(d => setCampaigns(d.campaigns || []))
-      .catch(console.error)
+    const headers = initData ? { 'x-telegram-init-data': initData } as HeadersInit : undefined;
+    Promise.all([
+      fetch('/api/campaigns').then(r => r.json()),
+      initData
+        ? fetch('/api/my-assignments', { headers }).then(r => r.json())
+        : Promise.resolve({ assignments: [] }),
+    ]).then(([campData, myData]) => {
+      setCampaigns(campData.campaigns || []);
+      // Build map: campaignId → assignment status
+      const map: Record<string, string> = {};
+      for (const a of (myData.assignments || [])) {
+        map[a.campaignId] = a.status;
+      }
+      setStatusMap(map);
+    }).catch(console.error)
       .finally(() => setLoading(false));
-  }, []);
+  }, [initData]);
 
   const showToast = (msg: string, ok: boolean) => {
     setToast({ msg, ok });
@@ -48,7 +60,7 @@ export default function TasksView({ initData, onBack }: TasksViewProps) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Ошибка');
-      setApplied(prev => new Set([...prev, campaignId]));
+      setStatusMap(prev => ({ ...prev, [campaignId]: 'accepted' }));
       showToast('Вы успешно откликнулись! ✓', true);
     } catch (err: any) {
       showToast(err.message, false);
@@ -74,7 +86,6 @@ export default function TasksView({ initData, onBack }: TasksViewProps) {
           color: toast.ok ? '#00ff88' : '#ff0080',
           fontSize: 13, fontWeight: 600, whiteSpace: 'nowrap',
           boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-          transition: 'opacity 0.3s',
         }}>
           {toast.msg}
         </div>
@@ -116,8 +127,12 @@ export default function TasksView({ initData, onBack }: TasksViewProps) {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingBottom: 20 }}>
           {filtered.map((c: any) => {
-            const isApplied = applied.has(c.id);
+            const assignStatus = statusMap[c.id];
+            // Can apply if: no assignment, or previous was rejected
+            const isBlocked = assignStatus && assignStatus !== 'rejected';
+            const isRejected = assignStatus === 'rejected';
             const isApplying = applying === c.id;
+
             return (
               <div key={c.id} className="cyber-card" style={{ padding: '18px' }}>
                 {/* Header row */}
@@ -150,7 +165,7 @@ export default function TasksView({ initData, onBack }: TasksViewProps) {
                     <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>🎯 {c.creatorsNeeded} мест</span>
                     <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>💰 {(c.budget || 0).toLocaleString()}₽</span>
                   </div>
-                  {isApplied ? (
+                  {isBlocked ? (
                     <span style={{
                       fontSize: 11, fontWeight: 700, letterSpacing: '0.06em',
                       color: 'var(--neon-green)', background: 'rgba(0,255,136,0.1)',
@@ -161,9 +176,14 @@ export default function TasksView({ initData, onBack }: TasksViewProps) {
                       className="cyber-btn"
                       disabled={isApplying}
                       onClick={() => handleApply(c.id)}
-                      style={{ fontSize: 11, padding: '6px 16px', cursor: isApplying ? 'wait' : 'pointer', opacity: isApplying ? 0.7 : 1 }}
+                      style={{
+                        fontSize: 11, padding: '6px 16px',
+                        cursor: isApplying ? 'wait' : 'pointer',
+                        opacity: isApplying ? 0.7 : 1,
+                        ...(isRejected ? { borderColor: 'rgba(255,200,0,0.5)', color: '#ffc800' } : {}),
+                      }}
                     >
-                      {isApplying ? '...' : 'Откликнуться'}
+                      {isApplying ? '...' : isRejected ? '↩ Повторить отклик' : 'Откликнуться'}
                     </button>
                   )}
                 </div>
